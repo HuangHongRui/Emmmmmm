@@ -1,3 +1,12 @@
+## 介绍
+
+应该会是一个 UI 库..
+
+## 使用
+
+查看：`yarn start`
+查看：`yarn docz:dev`
+
 ## 安装依赖
 
 1. `yarn add docz docz-theme-default @types/react @types/react-dom -D`
