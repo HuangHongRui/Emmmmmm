@@ -1,17 +1,20 @@
 const config = require("./webpack.config.dev");
-const merge = require("webpack-merge");
+const {merge} = require("webpack-merge");
 const paths = require("./paths");
 
 module.exports = merge(config, {
   mode: "development",
-  devtool: "cheap-module-eval-source-map",
+  devtool:  "eval-cheap-module-source-map",
   devServer: {
-    historyApiFallback: true,
+    compress: true,
+    port: 8000,
     hot: true,
+
+    historyApiFallback: true,
     watchContentBase: true,
     host: "localhost",
-    port: 8000,
     publicPath: "/",
+
     contentBase: paths.appPublic,
   }
 });
