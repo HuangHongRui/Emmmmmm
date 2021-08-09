@@ -1,75 +1,59 @@
 /**
  * @description 这是一个表单
  * @author Leo <xingfengshuo.leo@gmail.com>
- * @example
+ * @param mergeColumns Array  // 合并
+ * @param dataSource Array    // 主数据
+ * @param columns Array       // 头数据
+ * @param itemHeader Obejct   // 信息头文案字段
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { Table, Typography } from 'antd';
+import { Table } from 'antd';
 import './index.sass';
 
 interface yikuProps {
-  columns: {
-    dataIndex: string
-  }[],
+  columns: { dataIndex: string }[],
   dataSource: {}[],
   mergeColumns: string[]
+  itemHeader: {}
 }
 
 const Yiku = (props: yikuProps) => {
   const [ mData, setmData ] = useState([]);
   const [ mColumn, setmColumn ] = useState([]);
-  const { columns, dataSource, mergeColumns }: any = props;
+  const { columns, dataSource, mergeColumns, itemHeader }: any = props;
 
   // REF
   const tableRef = useRef(null);
   const TableWrap = (props: any) => <table ref={tableRef} {...props} />;
   const Tr = (props: any) => {
     const { className, children } = props;
-    if (className.includes('order-header')) {
-      return (
-        <tr className="order-header">
-          <td colSpan={children.length}> 123 </td>
-        </tr>
-      )
-    }
-    else return <tr {...props}/>;
+    if (className.includes('item-header')) {
+      return <tr className="item-header"> <td colSpan={children.length}></td> </tr>
+    } else return <tr {...props}/>;
   }
 
-  // 处理数据
-  const markData = () => {
-    const newAry: any = [];
-    dataSource.forEach((item: any, index: number) => {
-      const header = item['orderHeader'];
-      const info = item['orderInfo'];
-      const content = item['orderList'];
-      Object.keys(content).forEach((ite: any, idx) => {
-        let iteContent = content[ite];
-        if (ite == 0) {
-          newAry.push(Object.assign(header, {rowSpan: 1}, {key: `info-${index}-${idx} order-header`}))
-          Object.assign(iteContent, info, {rowSpan: content.length})
-        }
-        Object.assign(iteContent, {key: `${index}-${idx}`})
-        newAry.push(iteContent)
-      })
-    })
-    setmData(newAry);
-  }
-
-  // 处理表头结构
+  // 合并 - 处理表头结构
   const markColumn = () => {
+    console.log(1);
     const mColumn = columns.map((item: any) => {
-      if (mergeColumns.includes(item['dataIndex'])) {
-        const render = (value: any, row: any) => {
-          const obj: any = { children: value, props: {} };
-          if (row.rowSpan) {
-            obj.props.rowSpan = row.rowSpan;
+      // 是否在合并的列表总
+      const itemData =  item['dataIndex'];
+      if (mergeColumns.includes(itemData)) {
+          const render = (value: any, row: any) => {
+            let text = value
+            if (row.sid && itemData === 'action' && item.render){
+              text = item.render()
+            }
+            const obj: any = { children: text, props: {} };
+            if (row.mergeRow) {
+              obj.props.rowSpan = row.mergeRow;
+            }
+            else {
+              obj.props.rowSpan = 0;
+            }
+            return obj;
           }
-          else {
-            obj.props.rowSpan = 0;
-          }
-          return obj;
-        }
-        return {...item, render}
+          return { ...item, render }
       };
       return item;
     })
@@ -78,32 +62,32 @@ const Yiku = (props: yikuProps) => {
 
   // 操作DOM订单头
   const makeOrderInfo = (): void => {
-    const {current} = tableRef;
-    const orderHeader = current.getElementsByClassName('order-header');
-    dataSource.forEach((item: any, idx: number) => {
+    const { current } = tableRef;
+    const orderHeader = current.getElementsByClassName('item-header');
+    if (!orderHeader && !itemHeader) return;
+    const headerAry = dataSource.filter((item: {header: boolean}) => { return item.header })
+    headerAry.forEach((item: any, idx: number) => {
     // orderHeader: { numj: 1, order: 11, buyOrder: 111, createTime: 1111, mark: 11111 },
-    const {numj, order, buyOrder, createTime, mark} = item.orderHeader;
-      const td = orderHeader[idx] && orderHeader[idx].firstChild;
+    const keyAry = itemHeader && Object.keys(itemHeader);
+      const td = orderHeader[idx] && orderHeader[idx].firstElementChild;
       if (!td) return;
-      td.innerHTML = `
-        <span> 标准订单号：${numj} </span>
-        <span> 原始订单号：${order} </span>
-        <span> 采购订单号：${buyOrder} </span>
-        <span> 创建时间：${createTime} </span>
-        <span> 备注：${mark} </span>
-      `
-      console.log(td)
+      const node = keyAry.map((keyItem: string) => {
+        return `<span class='item-header-info'>${itemHeader[keyItem]}：${item[keyItem]}</span>`
+      })
+      td.innerHTML = node;
     })
     return null;
   }
 
-  useEffect(() => {
-    markData();
-  }, [])
+  const rowCN = function (record: {header: boolean}): string {
+    if (record.header) {
+      return `item-header`
+    }
+  }
 
   useEffect(() => {
     markColumn()
-  }, [mData])
+  }, [])
 
   useEffect(() => {
     makeOrderInfo()
@@ -112,17 +96,13 @@ const Yiku = (props: yikuProps) => {
   return (
     <div className="yiku-wrap">
       <Table
-        components={{ table: TableWrap, body: {row: Tr} }}
+        components={{
+          table: TableWrap,
+          body: {row: Tr}
+        }}
+        dataSource={dataSource}
         columns={mColumn}
-        dataSource={mData}
-        rowClassName={function(record, index): string {
-          return `cl-${record.key}`
-        }}
-        onRow={record => {
-          // console.log(record);
-          record
-          return {}
-        }}
+        rowClassName={rowCN}
       />
     </div>
   )
